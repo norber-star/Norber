@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recibo de Cobro</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1e293b; background: #fff; padding: 30px; margin: 0; }
+        .recibo-container { max-width: 800px; margin: 0 auto; border: 1px solid #cbd5e1; padding: 40px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .header-recibo { display: flex; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 20px; margin-bottom: 20px; }
+        .empresa h2 { margin: 0; color: #0f172a; font-size: 1.5rem; }
+        .empresa p, .datos-recibo p { margin: 4px 0; font-size: 0.9rem; color: #475569; }
+        .datos-recibo { text-align: right; }
+        .info-cliente { background: #f8fafc; padding: 15px; border-radius: 6px; margin-bottom: 25px; border: 1px solid #e2e8f0; }
+        .info-cliente h4 { margin: 0 0 8px 0; color: #1e293b; }
+        .tabla-aplicacion { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
+        .tabla-aplicacion th, .tabla-aplicacion td { border: 1px solid #cbd5e1; padding: 10px 12px; text-align: left; font-size: 0.9rem; }
+        .tabla-aplicacion th { background: #f1f5f9; color: #0f172a; }
+        .totales-container { display: flex; justify-content: flex-end; }
+        .totales-box { width: 320px; background: #f8fafc; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0; }
+        .totales-box h3 { display: flex; justify-content: space-between; margin: 0; color: #0f172a; font-size: 1.1rem; }
+        .acciones-bar { text-align: center; margin-top: 30px; }
+        .btn-imprimir { background: #2563eb; color: white; border: none; padding: 12px 25px; font-size: 1rem; border-radius: 6px; cursor: pointer; font-weight: 600; }
+        .btn-imprimir:hover { background: #1d4ed8; }
+
+        @media print {
+            body { padding: 0; background: none; }
+            .recibo-container { border: none; box-shadow: none; padding: 0; width: 100%; }
+            .acciones-bar { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="recibo-container">
+        <div class="header-recibo">
+            <div class="empresa">
+                <h2>SISTEMA SKF</h2>
+                <p>Comprobante de Cobro / Recibo Oficial</p>
+            </div>
+            <div class="datos-recibo">
+                <h3 id="lbl-nro-recibo" style="margin: 0 0 5px 0; color: #2563eb;">Recibo: --</h3>
+                <p id="lbl-fecha-recibo">Fecha: --/--/----</p>
+            </div>
+        </div>
+
+        <div class="info-cliente">
+            <h4>Datos del Cliente</h4>
+            <p id="lbl-cliente-nombre"><strong>Nombre / Razón Social:</strong> --</p>
+            <p id="lbl-cliente-cuit"><strong>CUIT / DNI:</strong> --</p>
+            <p id="lbl-cliente-tel"><strong>Teléfono:</strong> --</p>
+        </div>
+
+        <h3>Comprobantes / Facturas Aplicadas</h3>
+        <table class="tabla-aplicacion" style="margin-top: 10px;">
+            <thead>
+                <tr>
+                    <th>Nº Comprobante / Venta</th>
+                    <th>Importe Aplicado al Pago</th>
+                </tr>
+            </thead>
+            <tbody id="recibo-items-tbody"></tbody>
+        </table>
+
+        <div class="totales-container">
+            <div class="totales-box">
+                <h3><span>Total Recibido:</span> <span id="lbl-total-recibo">$0.00</span></h3>
+            </div>
+        </div>
+
+        <div style="margin-top: 20px; font-size: 0.9rem; color: #475569;">
+            <p><strong>Observaciones:</strong> <span id="lbl-observaciones">--</span></p>
+        </div>
+
+        <div class="acciones-bar">
+            <button class="btn-imprimir" onclick="window.print()">Imprimir / Guardar Recibo como PDF</button>
+        </div>
+    </div>
+
+    <!-- SDK de Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", async () => {
+            const params = new URLSearchParams(window.location.search);
+            const idPago = params.get("id");
+
+            if (!idPago) {
+                alert("No se indicó el recibo a reportar.");
+                return;
+            }
+
+            // Consultar el pago y el cliente asociado en Supabase
+            const { data: pago, error: pagoError } = await supabaseClient
+                .from('pagos_skf')
+                .select('*, clientes_skf(*)')
+                .eq('id_pago', idPago)
+                .single();
+
+            if (pagoError || !pago) {
+                alert("No se encontró el registro del recibo en Supabase.");
+                return;
+            }
+
+            const cliente = pago.clientes_skf || { nombre: "Cliente Genérico", cuit: "-", telefono: "-" };
+
+            document.getElementById("lbl-nro-recibo").innerText = `Recibo: ${pago.nro_recibo}`;
+            document.getElementById("lbl-fecha-recibo").innerText = `Fecha: ${pago.fecha}`;
+            document.getElementById("lbl-cliente-nombre").innerHTML = `<strong>Nombre / Razón Social:</strong> ${cliente.nombre}`;
+            document.getElementById("lbl-cliente-cuit").innerHTML = `<strong>CUIT / DNI:</strong> ${cliente.cuit || '-'}`;
+            document.getElementById("lbl-cliente-tel").innerHTML = `<strong>Teléfono:</strong> ${cliente.telefono || '-'}`;
+            document.getElementById("lbl-observaciones").innerText = pago.observaciones || 'Ninguna';
+            document.getElementById("lbl-total-recibo").innerText = `$${parseFloat(pago.monto).toFixed(2)}`;
+
+            const tbody = document.getElementById("recibo-items-tbody");
+            tbody.innerHTML = "";
+
+            if (pago.ventas_afectadas && Array.isArray(pago.ventas_afectadas)) {
+                pago.ventas_afectadas.forEach(afectada => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td><strong>${afectada.id_venta}</strong></td>
+                            <td>$${parseFloat(afectada.montoAplicado).toFixed(2)}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            const clienteLimpio = cliente.nombre.replace(/[^a-zA-Z0-9 ]/g, "").trim();
+            document.title = `Recibo_${pago.nro_recibo}_${clienteLimpio}`;
+        });
+    </script>
+</body>
+</html>

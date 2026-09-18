@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprobante Interno de Venta</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1e293b; background: #fff; padding: 30px; margin: 0; }
+        .factura-container { max-width: 850px; margin: 0 auto; border: 1px solid #cbd5e1; padding: 40px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .header-factura { display: flex; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 20px; margin-bottom: 20px; }
+        .empresa h2 { margin: 0; color: #0f172a; font-size: 1.5rem; }
+        .empresa p, .datos-venta p { margin: 4px 0; font-size: 0.9rem; color: #475569; }
+        .datos-venta { text-align: right; }
+        .info-cliente { background: #f8fafc; padding: 15px; border-radius: 6px; margin-bottom: 25px; border: 1px solid #e2e8f0; }
+        .info-cliente h4 { margin: 0 0 8px 0; color: #1e293b; }
+        .tabla-productos { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
+        .tabla-productos th, .tabla-productos td { border: 1px solid #cbd5e1; padding: 10px 12px; text-align: left; font-size: 0.85rem; }
+        .tabla-productos th { background: #f1f5f9; color: #0f172a; }
+        .totales-container { display: flex; justify-content: flex-end; }
+        .totales-box { width: 340px; background: #f8fafc; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0; }
+        .totales-box p { display: flex; justify-content: space-between; margin: 6px 0; font-size: 0.9rem; }
+        .totales-box h3 { display: flex; justify-content: space-between; margin: 10px 0 0 0; border-top: 1px solid #cbd5e1; padding-top: 8px; color: #0f172a; font-size: 1rem; }
+        .acciones-bar { text-align: center; margin-top: 30px; }
+        .btn-imprimir { background: #2563eb; color: white; border: none; padding: 12px 25px; font-size: 1rem; border-radius: 6px; cursor: pointer; font-weight: 600; }
+        .btn-imprimir:hover { background: #1d4ed8; }
+
+        @media print {
+            body { padding: 0; background: none; }
+            .factura-container { border: none; box-shadow: none; padding: 0; width: 100%; }
+            .acciones-bar { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="factura-container">
+        <div class="header-factura">
+            <div class="empresa">
+                <h2>SISTEMA SKF - REPORTE INTERNO</h2>
+                <p>Detalle de Operación y Margen Oculto</p>
+            </div>
+            <div class="datos-venta">
+                <h3 id="lbl-id-venta" style="margin: 0 0 5px 0; color: #2563eb;">Nº Venta: --</h3>
+                <p id="lbl-fecha">Fecha: --/--/----</p>
+                <p id="lbl-vencimiento" style="color: #dc2626; font-weight: 600;">Vencimiento: --/--/----</p>
+            </div>
+        </div>
+
+        <div class="info-cliente">
+            <h4>Datos del Cliente</h4>
+            <p id="lbl-cliente-nombre"><strong>Nombre / Razón Social:</strong> --</p>
+            <p id="lbl-cliente-cuit"><strong>CUIT / DNI:</strong> --</p>
+            <p id="lbl-cliente-tel"><strong>Teléfono:</strong> --</p>
+        </div>
+
+        <table class="tabla-productos">
+            <thead>
+                <tr>
+                    <th style="text-align: center; width: 40px;">Cant.</th>
+                    <th>Código / SKU</th>
+                    <th>Descripción</th>
+                    <th>P. Lista Bruto</th>
+                    <th>P. Aplicado (Neto)</th>
+                    <th>Subtotal Línea</th>
+                </tr>
+            </thead>
+            <tbody id="reporte-items-tbody"></tbody>
+        </table>
+
+        <div class="totales-container">
+            <div class="totales-box">
+                <p><span>Subtotal Bruto (Lista):</span> <span id="lbl-subtotal-bruto">$0.00</span></p>
+                <p style="color: #dc2626;"><span>Descuento Interno Aplicado:</span> <span id="lbl-descuento-monto">-$0.00</span></p>
+                <p><span>Impuestos (IVA/Tasa):</span> <span id="lbl-impuestos-val">$0.00</span></p>
+                <h3><span>Total Final Cobrado:</span> <span id="lbl-total-val">$0.00</span></h3>
+            </div>
+        </div>
+
+        <div class="acciones-bar">
+            <button class="btn-imprimir" onclick="window.print()">Imprimir / Guardar como PDF</button>
+        </div>
+    </div>
+
+    <!-- SDK de Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", async () => {
+            const params = new URLSearchParams(window.location.search);
+            const idVenta = params.get("id");
+
+            if (!idVenta) {
+                alert("No se indicó la venta a reportar.");
+                return;
+            }
+
+            // Consultar venta y cliente asociado directamente desde Supabase
+            const { data: venta, error: ventaError } = await supabaseClient
+                .from('ventas_skf')
+                .select('*, clientes_skf(*)')
+                .eq('id_venta', idVenta)
+                .single();
+
+            if (ventaError || !venta) {
+                alert("No se encontró la venta en Supabase.");
+                return;
+            }
+
+            const cliente = venta.clientes_skf || { nombre: "Cliente Genérico", cuit: "-", telefono: "-" };
+
+            document.getElementById("lbl-id-venta").innerText = `Nº Venta: ${venta.id_venta}`;
+            document.getElementById("lbl-fecha").innerText = `Fecha: ${venta.fecha}`;
+            document.getElementById("lbl-vencimiento").innerText = `Vencimiento: ${venta.fecha_vencimiento || 'N/A'}`;
+            document.getElementById("lbl-cliente-nombre").innerHTML = `<strong>Nombre / Razón Social:</strong> ${cliente.nombre}`;
+            document.getElementById("lbl-cliente-cuit").innerHTML = `<strong>CUIT / DNI:</strong> ${cliente.cuit || '-'}`;
+            document.getElementById("lbl-cliente-tel").innerHTML = `<strong>Teléfono:</strong> ${cliente.telefono || '-'}`;
+
+            const tbody = document.getElementById("reporte-items-tbody");
+            tbody.innerHTML = "";
+
+            let acumuladoBruto = 0;
+            let acumuladoNeto = 0;
+            const porcentajeDesc = venta.configuracion_aplicada ? venta.configuracion_aplicada.descuentoInternoPorcentaje || 0 : 0;
+
+            venta.items.forEach(item => {
+                let pBruto = item.precioBrutoUnitario !== undefined ? item.precioBrutoUnitario : item.precio;
+                let pNeto = item.precioNetoUnitario !== undefined ? item.precioNetoUnitario : (pBruto * (1 - (porcentajeDesc / 100)));
+                
+                let subtotalLinea = pNeto * item.cantidad;
+                acumuladoBruto += (pBruto * item.cantidad);
+                acumuladoNeto += subtotalLinea;
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td style="text-align: center;">${item.cantidad}</td>
+                        <td><strong>${item.sku}</strong></td>
+                        <td>${item.nombre}</td>
+                        <td>$${pBruto.toFixed(2)}</td>
+                        <td>$${pNeto.toFixed(2)}</td>
+                        <td>$${subtotalLinea.toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+
+            let montoDescuentoTotal = acumuladoBruto - acumuladoNeto;
+            let ivaTasaPorc = venta.configuracion_aplicada ? (parseFloat(venta.configuracion_aplicada.iva) || 0) + (parseFloat(venta.configuracion_aplicada.tasa) || 0) : 0;
+            let montoImpuestos = acumuladoNeto * (ivaTasaPorc / 100);
+
+            document.getElementById("lbl-subtotal-bruto").innerText = `$${acumuladoBruto.toFixed(2)}`;
+            document.getElementById("lbl-descuento-monto").innerText = `-$${montoDescuentoTotal.toFixed(2)} (${porcentajeDesc}%)`;
+            document.getElementById("lbl-impuestos-val").innerText = `$${montoImpuestos.toFixed(2)}`;
+            document.getElementById("lbl-total-val").innerText = venta.total;
+
+            const clienteLimpio = cliente.nombre.replace(/[^a-zA-Z0-9 ]/g, "").trim();
+            document.title = `ReporteInterno_${venta.id_venta}_${clienteLimpio}`;
+        });
+    </script>
+</body>
+</html>
