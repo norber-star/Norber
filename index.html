@@ -3,229 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema Cuentas Corrientes - Supabase</title>
-    <link rel="stylesheet" href="style.css">
+    <title>SKF - Sistema de Gestión y Facturación</title>
+    <!-- Aquí irían tus estilos CSS o enlace a style.css -->
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+        body { background: #f1f5f9; color: #1e293b; padding: 20px; }
+        .app-container { max-width: 1200px; margin: 0 auto; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        h1 { margin-bottom: 20px; font-size: 1.5rem; color: #0f172a; }
+        
+        /* Estilos de tabla y filtros */
+        .filtros-cc-container { display: flex; gap: 10px; margin-bottom: 15px; }
+        .btn-filtro { padding: 8px 14px; border: 1px solid #cbd5e1; background: #f8fafc; color: #1e293b; border-radius: 4px; cursor: pointer; font-weight: 500; transition: all 0.2s; }
+        .btn-filtro.activo { background: #2563eb; color: white; border-color: #2563eb; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 0.95rem; }
+        th { background: #f8fafc; font-weight: 600; color: #475569; }
+    </style>
 </head>
 <body>
+
     <div class="app-container">
-        <!-- Header -->
-        <header class="app-header">
-            <h1>Sistema de Gestión - SKF (Supabase)</h1>
-            <div class="global-controls">
-                <label>Dólar Ref ($): <input type="number" id="input-dolar" value="1000" step="0.01"></label>
-                <label>IVA (%): <input type="number" id="input-iva" value="21" step="0.01"></label>
-                <label>Tasa (%): <input type="number" id="input-tasa" value="0" step="0.01"></label>
-                <button id="btn-backdoor" class="btn-secundario">⚙️ Config. Oculta</button>
-            </div>
-        </header>
+        <h1>Gestión de Cuentas Corrientes - SKF</h1>
 
-        <!-- Navegación de Vistas -->
-        <nav class="app-nav">
-            <button class="nav-btn active" data-target="seccion-venta">Nueva Venta</button>
-            <button class="nav-btn" data-target="seccion-clientes">Clientes</button>
-            <button class="nav-btn" data-target="seccion-ctacte">Cuentas Corrientes</button>
-            <button class="nav-btn" data-target="seccion-historial">Historial Ventas</button>
-        </nav>
+        <!-- Botones de Filtro -->
+        <div class="filtros-cc-container">
+            <button class="btn-filtro activo" data-filtro="todas">Todas</button>
+            <button class="btn-filtro" data-filtro="vencidas">Vencidas</button>
+            <button class="btn-filtro" data-filtro="vigentes">Al día / No vencidas</button>
+        </div>
 
-        <!-- SECCIÓN 1: NUEVA VENTA / CARRITO -->
-        <main>
-            <section id="seccion-venta" class="vista active">
-                <!-- Buscador Predictivo de Clientes -->
-                <div class="panel-cliente" style="position: relative;">
-                    <label for="input-buscar-cliente"><strong>Cliente:</strong></label>
-                    <input type="text" id="input-buscar-cliente" placeholder="Escriba para buscar cliente por nombre o CUIT..." autocomplete="off" style="flex: 1; padding: 8px; border: 1px solid var(--border); border-radius: 4px;">
-                    <input type="hidden" id="select-cliente-id">
-                    <div id="sugerencias-cliente-box" class="sugerencias-dropdown"></div>
-                    <span id="lbl-cliente-seleccionado" style="margin-left: 10px; font-weight: 600; color: var(--accent);">Ninguno seleccionado</span>
-                </div>
-
-                <!-- Selector de Vencimiento Particular para esta Venta -->
-                <div class="panel-cliente" style="margin-top: 10px;">
-                    <label for="input-vencimiento-venta"><strong>Fecha de Vencimiento:</strong></label>
-                    <input type="date" id="input-vencimiento-venta" style="padding: 6px; border: 1px solid var(--border); border-radius: 4px;">
-                    <span style="font-size: 0.85rem; color: #64748b; margin-left: 10px;">(Por defecto se sugieren 10 días, modificable por presupuesto)</span>
-                </div>
-
-                <div class="panel-busqueda">
-                    <div class="buscador-container">
-                        <input type="text" id="input-buscar-sku" placeholder="Buscar por SKU (ej: BKMA06020) o Nombre..." autocomplete="off">
-                        <div id="sugerencias-box" class="sugerencias-dropdown"></div>
-                    </div>
-                    <button id="btn-item-manual" class="btn-secundario">+ Ítem Manual</button>
-                </div>
-
-                <div class="tabla-carrito-container">
-                    <table class="tabla-datos">
-                        <thead>
-                            <tr>
-                                <th>SKU / Código</th>
-                                <th>Descripción</th>
-                                <th>Moneda</th>
-                                <th>Precio Unit. Final</th>
-                                <th>Cant.</th>
-                                <th>Subtotal</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="carrito-tbody"></tbody>
-                    </table>
-                </div>
-
-                <div class="panel-resumen">
-                    <div class="totales-info">
-                        <h3>Total Final: <span id="lbl-total-final">$0.00</span></h3>
-                    </div>
-                    <button id="btn-finalizar-venta" class="btn-principal">Generar Venta / Cta. Corriente</button>
-                </div>
-            </section>
-
-            <!-- SECCIÓN 2: CLIENTES -->
-            <section id="seccion-clientes" class="vista">
-                <h2>Gestión de Clientes</h2>
-                <form id="form-cliente" class="form-inline">
-                    <input type="hidden" id="cliente-id">
-                    <input type="text" id="cliente-nombre" placeholder="Razón Social / Nombre" required>
-                    <input type="text" id="cliente-cuit" placeholder="CUIT / DNI">
-                    <input type="text" id="cliente-telefono" placeholder="Teléfono">
-                    <input type="text" id="cliente-direccion" placeholder="Dirección">
-                    <button type="submit" class="btn-principal">Guardar Cliente</button>
-                </form>
-                <table class="tabla-datos" style="margin-top: 20px;">
-                    <thead>
-                        <tr>
-                            <th>Nombre</th>
-                            <th>CUIT</th>
-                            <th>Teléfono</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="clientes-tbody"></tbody>
-                </table>
-            </section>
-
-            <!-- SECCIÓN 3: CUENTAS CORRIENTES Y PAGOS -->
-            <section id="seccion-ctacte" class="vista">
-                <h2>Cuentas Corrientes y Vencimientos</h2>
-                
-                <!-- Buscador predictivo de cliente para Cuentas Corrientes -->
-                <div class="panel-cliente" style="margin-top: 15px; position: relative;">
-                    <label for="input-buscar-cliente-ctacte"><strong>Seleccionar Cliente:</strong></label>
-                    <input type="text" id="input-buscar-cliente-ctacte" placeholder="Escriba para buscar cliente por nombre o CUIT..." autocomplete="off" style="flex: 1; padding: 8px; border: 1px solid var(--border); border-radius: 4px;">
-                    <input type="hidden" id="select-cliente-ctacte" value="">
-                    <div id="sugerencias-cliente-ctacte-box" class="sugerencias-dropdown"></div>
-                    <span id="lbl-cliente-ctacte-seleccionado" style="margin-left: 10px; font-weight: 600; color: var(--accent);">Ninguno seleccionado</span>
-                </div>
-
-                <div class="resumen-deuda-box" style="background: #f1f5f9; padding: 15px; border-radius: 6px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <h3>Deuda Total Acumulada: <span id="lbl-deuda-total" style="color: #dc2626;">$0.00</span></h3>
-                    </div>
-                    <button id="btn-registrar-pago" class="btn-principal">Registrar Pago de Seleccionados</button>
-                </div>
-
-                <h3>Comprobantes y Estado de Vencimientos</h3>
-                <table class="tabla-datos" style="margin-top: 10px;">
-                    <thead>
-                        <tr>
-                            <th style="text-align: center; width: 40px;">Selecc.</th>
-                            <th>Nº Venta</th>
-                            <th>Fecha Emisión</th>
-                            <th>Vencimiento</th>
-                            <th>Importe Original</th>
-                            <th>Saldo Pendiente</th>
-                            <th>Estado</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="ctacte-tbody"></tbody>
-                </table>
-
-                <h3 style="margin-top: 30px;">Recibos de Pago Emitidos</h3>
-                <table class="tabla-datos" style="margin-top: 10px;">
-                    <thead>
-                        <tr>
-                            <th>Nº Recibo</th>
-                            <th>Fecha</th>
-                            <th>Monto Cobrado</th>
-                            <th>Observaciones</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="recibos-tbody"></tbody>
-                </table>
-            </section>
-
-            <!-- SECCIÓN 4: HISTORIAL -->
-            <section id="seccion-historial" class="vista">
-                <h2>Historial de Ventas</h2>
-                <div class="filtros-historial">
-                    <label>Filtrar por Cliente: <select id="filtro-cliente-historial"><option value="">Todos</option></select></label>
-                </div>
-                <table class="tabla-datos" style="margin-top: 20px;">
-                    <thead>
-                        <tr>
-                            <th>Nº Venta</th>
-                            <th>Fecha</th>
-                            <th>Cliente</th>
-                            <th>Importe Total</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="historial-tbody"></tbody>
-                </table>
-            </section>
-        </main>
-    </div>
-
-    <!-- MODAL: REGISTRAR PAGO -->
-    <div id="modal-pago" class="modal">
-        <div class="modal-content">
-            <span class="close-pago">&times;</span>
-            <h2>Registrar Pago en Cuenta Corriente</h2>
-            <p id="pago-cliente-nombre" style="margin: 10px 0; font-weight: 600;"></p>
-            <p id="pago-seleccion-info" style="margin: 5px 0 15px 0; font-size: 0.9rem; color: #475569;"></p>
-            
-            <form id="form-pago" style="margin-top: 10px;">
-                <div style="margin-bottom: 15px;">
-                    <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer;">
-                        <input type="checkbox" id="check-abonar-total" style="width: 18px; height: 18px;"> Abonar el total completo de los comprobantes seleccionados
-                    </label>
-                </div>
-                
-                <label style="display: block; margin-bottom: 15px;">Monto a Pagar ($): 
-                    <input type="number" id="input-monto-pago" step="0.01" required style="width: 100%; padding: 8px; margin-top: 5px;">
-                </label>
-                
-                <label style="display: block; margin-bottom: 15px;">Observaciones / Recibo Nº: 
-                    <input type="text" id="input-obs-pago" placeholder="Ej: Recibo 001" style="width: 100%; padding: 8px; margin-top: 5px;">
-                </label>
-                
-                <button type="submit" class="btn-principal" style="width: 100%;">Aplicar Pago</button>
-            </form>
+        <!-- Tabla de Cuentas Corrientes -->
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Cliente</th>
+                        <th>Monto Total</th>
+                        <th>Fecha de Vencimiento</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-cuentas-corrientes-body">
+                    <!-- Los datos se cargan dinámicamente desde app.js -->
+                </tbody>
+            </table>
         </div>
     </div>
 
-    <!-- MODAL: PUERTA TRASERA CONFIG -->
-    <div id="modal-backdoor" class="modal">
-        <div class="modal-content">
-            <span class="close-backdoor">&times;</span>
-            <h2>Panel Oculto de Configuración</h2>
-            <p>Configurá los parámetros internos de operación:</p>
-            <label style="display: block; margin-bottom: 10px;">Margen de Descuento Interno (%): <input type="number" id="input-config-descuento" value="15" step="0.01" style="width: 80px;"></label>
-            <button id="btn-guardar-config" class="btn-principal" style="margin-top: 5px;">Guardar Configuración</button>
-            
-            <hr style="margin: 20px 0;">
-            <h3>Importar Lista de Precios (Excel)</h3>
-            <input type="file" id="input-excel-file" accept=".xlsx, .xls, .csv" style="margin-bottom: 10px; display: block;">
-            <button id="btn-procesar-excel" class="btn-secundario">Cargar y Actualizar Productos</button>
-        </div>
-    </div>
-
-    <!-- SDK de Supabase -->
+    <!-- Librería de Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- SheetJS para Excel -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="supabase-config.js"></script>
+    <!-- Tu archivo de lógica completo -->
     <script src="app.js"></script>
 </body>
 </html>
