@@ -4,57 +4,82 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SKF - Sistema de Gestión y Facturación</title>
-    <!-- Aquí irían tus estilos CSS o enlace a style.css -->
+    <!-- Estilos generales de la aplicación -->
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
-        body { background: #f1f5f9; color: #1e293b; padding: 20px; }
-        .app-container { max-width: 1200px; margin: 0 auto; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        body { background: #f1f5f9; color: #1e293b; padding: 15px; }
+        .app-container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         h1 { margin-bottom: 20px; font-size: 1.5rem; color: #0f172a; }
         
-        /* Estilos de tabla y filtros */
-        .filtros-cc-container { display: flex; gap: 10px; margin-bottom: 15px; }
+        /* Secciones y Pestañas */
+        .seccion { display: none; }
+        .seccion.activa { display: block; }
+
+        /* Botones de Filtro para Cuentas Corrientes */
+        .filtros-cc-container { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
         .btn-filtro { padding: 8px 14px; border: 1px solid #cbd5e1; background: #f8fafc; color: #1e293b; border-radius: 4px; cursor: pointer; font-weight: 500; transition: all 0.2s; }
         .btn-filtro.activo { background: #2563eb; color: white; border-color: #2563eb; }
         
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        /* Tablas */
+        .table-responsive { width: 100%; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; min-width: 600px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 0.95rem; }
         th { background: #f8fafc; font-weight: 600; color: #475569; }
+
+        /* Estilos de botones generales */
+        .btn-principal { background: #2563eb; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: 600; }
+        .btn-principal:hover { background: #1d4ed8; }
     </style>
 </head>
 <body>
 
     <div class="app-container">
-        <h1>Gestión de Cuentas Corrientes - SKF</h1>
+        <!-- Navegación o Encabezado Principal de tu App -->
+        <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 15px;">
+            <h1>SKF - Gestión</h1>
+            <!-- Aquí podés tener tus botones de navegación entre clientes, productos, cuentas corrientes, etc. -->
+        </header>
 
-        <!-- Botones de Filtro -->
-        <div class="filtros-cc-container">
-            <button class="btn-filtro activo" data-filtro="todas">Todas</button>
-            <button class="btn-filtro" data-filtro="vencidas">Vencidas</button>
-            <button class="btn-filtro" data-filtro="vigentes">Al día / No vencidas</button>
-        </div>
+        <!-- SECCIÓN DE CUENTAS CORRIENTES -->
+        <section id="seccion-cuentas-corrientes" class="seccion activa">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                <h2 style="font-size: 1.25rem; color: #334155;">Gestión de Cuentas Corrientes</h2>
+            </div>
 
-        <!-- Tabla de Cuentas Corrientes -->
-        <div style="overflow-x: auto;">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Cliente</th>
-                        <th>Monto Total</th>
-                        <th>Fecha de Vencimiento</th>
-                        <th>Estado</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody id="tabla-cuentas-corrientes-body">
-                    <!-- Los datos se cargan dinámicamente desde app.js -->
-                </tbody>
-            </table>
-        </div>
+            <!-- Botones de Filtro (Todas / Vencidas / Al día) -->
+            <div class="filtros-cc-container">
+                <button class="btn-filtro activo" data-filtro="todas">Todas</button>
+                <button class="btn-filtro" data-filtro="vencidas">Vencidas</button>
+                <button class="btn-filtro" data-filtro="vigentes">Al día / No vencidas</button>
+            </div>
+
+            <!-- Tabla de Cuentas Corrientes -->
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Cliente</th>
+                            <th>Monto Total</th>
+                            <th>Fecha de Vencimiento</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-cuentas-corrientes-body">
+                        <!-- Los datos se cargan dinámicamente desde app.js -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- OTRAS SECCIONES DE TU SISTEMA (Clientes, Productos, etc.) -->
+        <!-- Podés mantener tus otros divs de secciones acá abajo tal como los tenías -->
+
     </div>
 
     <!-- Librería de Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Tu archivo de lógica completo -->
+    <!-- Tu archivo de lógica completo (app.js) -->
     <script src="app.js"></script>
 </body>
 </html>
